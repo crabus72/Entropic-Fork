@@ -73,6 +73,7 @@ end
 
 function create_UIBox_your_collection_rune_tags_content(page)
 	page = page or 1
+    G.your_collection_runes = {}
 	local tag_matrix = {}
 	local rows = 5
 	local cols = 6
@@ -89,6 +90,7 @@ function create_UIBox_your_collection_rune_tags_content(page)
 			local temp_tag = Tag(v.key, true)
 			if not v.discovered then temp_tag.hide_ability = true end
 			local temp_tag_ui, temp_tag_sprite = temp_tag:generate_UI()
+            G.your_collection_runes[#G.your_collection_runes+1] = {tag = temp_tag, sprite = temp_tag_sprite}
 			tag_matrix[row][col] = {
 				n = G.UIT.C,
 				config = { align = "cm", padding = 0.1 },
@@ -209,7 +211,7 @@ end
 
 function add_rune(_tag, no_copy)
     G.HUD_runes = G.HUD_runes or {}
-    local tag_sprite_ui = _tag:generate_UI()
+    local tag_sprite_ui, tag_sprite = _tag:generate_UI()
     G.HUD_runes[#G.HUD_runes+1] = UIBox{
         definition = {n=G.UIT.ROOT, config={align = "tm", padding = 0.05, colour = G.C.CLEAR}, nodes={
           tag_sprite_ui
@@ -230,6 +232,7 @@ function add_rune(_tag, no_copy)
     _tag.HUD_rune = G.HUD_runes[#G.HUD_runes]
     _tag.HUD_tag = _tag.HUD_rune
     _tag.is_rune = true
+    _tag.HUD_sprite = tag_sprite
     if #G.HUD_runes > 6 then
 		for i = 2, #G.HUD_runes do
 			G.HUD_runes[i].config.offset.y = -0.9 + 0.9 * (6 / #G.HUD_runes)
@@ -392,24 +395,36 @@ function Entropy.create_rune(key, pos, indicator_key, order, credits, loc_vars, 
         soul_set = spectral and "Rune" or nil,
         hidden = spectral,
         dependencies = {items = {"set_entr_runes"}},
-        use = function()
+        use = function(self, card)
+            G.E_MANAGER:add_event(Event({trigger = 'after', delay = 0.2, func = function()
+                play_sound('entr_runes')
+                if card and card.juice_up then card:juice_up(0.8, 0.5) end
+                G.TAROT_INTERRUPT_PULSE = true
+                return true end }))
             G.E_MANAGER:add_event(Event({
                 trigger = "after",
+                delay = 0.5,
 				func = function()
-                    add_rune(Tag(indicator_key))
+                    local tag = add_rune(Tag(indicator_key))
+                    G.E_MANAGER:add_event(Event({
+                        trigger = "after",
+                        delay = 0.2,
+                        func = function()
+                            if tag then
+                                tag:juice_up()
+                            end
+                            return true
+                        end
+                    }))
                     return true
                 end
             }))
+            
+            delay(1.3)
         end,
         demicoloncompat = true,
-        force_use = function()
-            G.E_MANAGER:add_event(Event({
-				func = function()
-                    trigger = "after",
-                    add_rune(Tag(indicator_key))
-                    return true
-                end
-            }))
+        force_use = function(self, card)
+            self:use(card)
         end,
         loc_vars = function(self, q, card)
             if loc_vars then
@@ -428,7 +443,7 @@ function Entropy.create_rune(key, pos, indicator_key, order, credits, loc_vars, 
     }
 end
 
-local fehu = Entropy.create_rune("fehu", {x=0,y=0}, "rune_entr_fehu", 6001)
+local fehu = Entropy.create_rune("fehu", {x=0,y=0}, "rune_entr_fehu", 6001, nil, nil, nil, {x = 0, y = 1})
 local fehu_indicator = {
     object_type = "RuneTag",
     order = 7001,
@@ -455,7 +470,7 @@ local fehu_indicator = {
     end
 }
 
-local uruz = Entropy.create_rune("uruz", {x=1,y=0}, "rune_entr_uruz", 6002)
+local uruz = Entropy.create_rune("uruz", {x=1,y=0}, "rune_entr_uruz", 6002, nil, nil, nil, {x = 1, y = 1})
 local uruz_indicator = {
     object_type = "RuneTag",
     order = 7002,
@@ -466,7 +481,7 @@ local uruz_indicator = {
     dependencies = {items = {"set_entr_runes"}},
 }
 
-local thurisaz = Entropy.create_rune("thurisaz", {x=2,y=0}, "rune_entr_thurisaz", 6003)
+local thurisaz = Entropy.create_rune("thurisaz", {x=2,y=0}, "rune_entr_thurisaz", 6003, nil, nil, nil, {x = 2, y = 1})
 local thurisaz_indicator = {
     object_type = "RuneTag",
     order = 7003,
@@ -507,7 +522,7 @@ local thurisaz_indicator = {
     end
 }
 
-local ansuz = Entropy.create_rune("ansuz", {x=3,y=0}, "rune_entr_ansuz", 6004)
+local ansuz = Entropy.create_rune("ansuz", {x=3,y=0}, "rune_entr_ansuz", 6004, nil, nil, nil, {x = 3, y = 1})
 local ansuz_indicator = {
     object_type = "RuneTag",
     order = 7004,
@@ -545,7 +560,7 @@ local raido = Entropy.create_rune("raido", {x=4,y=0}, "rune_entr_raido", 6005, n
     return {
         n, d
     }
-end)
+end, nil, {x = 4, y = 1})
 local raido_indicator = {
     object_type = "RuneTag",
     order = 7005,
@@ -574,7 +589,7 @@ local raido_indicator = {
     end
 }
 
-local kaunan = Entropy.create_rune("kaunan", {x=5,y=0}, "rune_entr_kaunan", 6006)
+local kaunan = Entropy.create_rune("kaunan", {x=5,y=0}, "rune_entr_kaunan", 6006, nil, nil, nil, {x = 5, y = 1})
 local kaunan_indicator = {
     object_type = "RuneTag",
     order = 7006,
@@ -588,7 +603,7 @@ local kaunan_indicator = {
             local text, loc_disp_text, poker_hands, scoring_hand, disp_text =
             G.FUNCS.get_poker_hand_info(G.play.cards)
             local amount = G.GAME.providence and 2 or 1
-            level_up_hand(rune, text, nil, amount)
+            SMODS.upgrade_poker_hands{hands = text, from = rune, level_up = amount}
             return {
                 --remove = true,
                 func = function()
@@ -599,7 +614,7 @@ local kaunan_indicator = {
     end
 }
 
-local gebo = Entropy.create_rune("gebo", {x=6,y=0}, "rune_entr_gebo", 6007)
+local gebo = Entropy.create_rune("gebo", {x=6,y=0}, "rune_entr_gebo", 6007, nil, nil, nil, {x = 6, y = 1})
 local gebo_indicator = {
     object_type = "RuneTag",
     order = 7007,
@@ -637,7 +652,7 @@ local gebo_indicator = {
     end
 }
 
-local wunjo = Entropy.create_rune("wunjo", {x=0,y=1}, "rune_entr_wunjo", 6008)
+local wunjo = Entropy.create_rune("wunjo", {x=0,y=2}, "rune_entr_wunjo", 6008, nil, nil, nil, {x = 0, y = 3})
 local wunjo_indicator = {
     object_type = "RuneTag",
     order = 7008,
@@ -674,7 +689,7 @@ local wunjo_indicator = {
     end
 }
 
-local haglaz = Entropy.create_rune("haglaz", {x=1,y=1}, "rune_entr_haglaz", 6009)
+local haglaz = Entropy.create_rune("haglaz", {x=1,y=2}, "rune_entr_haglaz", 6009, nil, nil, nil, {x = 1, y = 3})
 local haglaz_indicator = {
     object_type = "RuneTag",
     order = 7009,
@@ -722,7 +737,7 @@ local haglaz_indicator = {
 }
 
 
-local naudiz = Entropy.create_rune("naudiz", {x=2,y=1}, "rune_entr_naudiz", 6010)
+local naudiz = Entropy.create_rune("naudiz", {x=2,y=2}, "rune_entr_naudiz", 6010, nil, nil, nil, {x = 2, y = 3})
 local naudiz_indicator = {
     object_type = "RuneTag",
     order = 7010,
@@ -733,6 +748,7 @@ local naudiz_indicator = {
     dependencies = {items = {"set_entr_runes"}},
     calculate = function(self, rune, context)
         if context.buying_card and to_big(context.card.cost) > to_big(G.GAME.dollars) then
+            SMODS.calculate_context({rune_triggered = true, rune = rune})
             return {
                 --remove = true,
                 func = function()
@@ -774,6 +790,16 @@ G.FUNCS.can_open = function(e)
         e.config.colour = G.C.GREEN
         e.config.button = 'use_card'
     end
+    if e.config.ref_table.ability.beast_mark then
+        local num = type(e.config.ref_table.ability.beast_mark) == "number" and e.config.ref_table.ability.beast_mark or 1
+        if #G.deck.cards >= num then
+            e.config.colour = G.C.GREEN
+            e.config.button = 'use_card'
+        elseif not Entropy.has_rune("rune_entr_naudiz") then
+            e.config.colour = G.C.UI.BACKGROUND_INACTIVE
+            e.config.button = nil
+        end
+    end
 end
 
 local can_redeem_ref = G.FUNCS.can_redeem
@@ -783,9 +809,19 @@ G.FUNCS.can_redeem = function(e)
         e.config.colour = G.C.GREEN
         e.config.button = 'use_card'
     end
+    if e.config.ref_table.ability.beast_mark then
+        local num = type(e.config.ref_table.ability.beast_mark) == "number" and e.config.ref_table.ability.beast_mark or 1
+        if #G.deck.cards >= num then
+            e.config.colour = G.C.GREEN
+            e.config.button = 'use_card'
+        elseif not Entropy.has_rune("rune_entr_naudiz") then
+            e.config.colour = G.C.UI.BACKGROUND_INACTIVE
+            e.config.button = nil
+        end
+    end
 end
 
-local isaz = Entropy.create_rune("isaz", {x=3,y=1}, "rune_entr_isaz", 6011)
+local isaz = Entropy.create_rune("isaz", {x=3,y=2}, "rune_entr_isaz", 6011, nil, nil, nil, {x = 3, y = 3})
 local isaz_indicator = {
     object_type = "RuneTag",
     order = 7011,
@@ -806,7 +842,7 @@ local isaz_indicator = {
     end,
 }
 
-local jera = Entropy.create_rune("jera", {x=4,y=1}, "rune_entr_jera", 6012)
+local jera = Entropy.create_rune("jera", {x=4,y=2}, "rune_entr_jera", 6012, nil, nil, nil, {x = 4, y = 3})
 local jera_indicator = {
     object_type = "RuneTag",
     order = 7012,
@@ -837,7 +873,7 @@ local jera_indicator = {
     end
 }
 
-local ihwaz = Entropy.create_rune("ihwaz", {x=5,y=1}, "rune_entr_ihwaz", 6013)
+local ihwaz = Entropy.create_rune("ihwaz", {x=5,y=2}, "rune_entr_ihwaz", 6013, nil, nil, nil, {x = 5, y = 3})
 local ihwaz_indicator = {
     object_type = "RuneTag",
     order = 7013,
@@ -876,7 +912,7 @@ local ihwaz_indicator = {
     end
 }
 
-local perthro = Entropy.create_rune("perthro", {x=6,y=1}, "rune_entr_perthro", 6014)
+local perthro = Entropy.create_rune("perthro", {x=6,y=2}, "rune_entr_perthro", 6014, nil, nil, nil, {x = 6, y = 3})
 local perthro_indicator = {
     object_type = "RuneTag",
     order = 7014,
@@ -887,6 +923,7 @@ local perthro_indicator = {
     dependencies = {items = {"set_entr_runes"}},
     calculate = function(self, rune, context)
         if context.reroll_shop then
+            SMODS.calculate_context({rune_triggered = true, rune = rune})
             return {
                 rune_break = true,
                 func = function()
@@ -918,7 +955,7 @@ local perthro_indicator = {
     end
 }
 
-local algiz = Entropy.create_rune("algiz", {x=0,y=2}, "rune_entr_algiz", 6015)
+local algiz = Entropy.create_rune("algiz", {x=0,y=4}, "rune_entr_algiz", 6015, nil, nil, nil, {x = 0, y = 5})
 local algiz_indicator = {
     object_type = "RuneTag",
     order = 7015,
@@ -939,7 +976,7 @@ local algiz_indicator = {
     end
 }
 
-local sowilo = Entropy.create_rune("sowilo", {x=1,y=2}, "rune_entr_sowilo", 6016)
+local sowilo = Entropy.create_rune("sowilo", {x=1,y=4}, "rune_entr_sowilo", 6016, nil, nil, nil, {x = 1, y = 5})
 local sowilo_indicator = {
     object_type = "RuneTag",
     order = 7016,
@@ -951,7 +988,7 @@ local sowilo_indicator = {
     calculate = function(self, rune, context)
         if context.pre_discard then
             local text = G.FUNCS.get_poker_hand_info(G.hand.highlighted)
-            Entropy.ReversePlanetUse(text, rune, G.GAME.providence and 4 or 2)
+            SMODS.upgrade_poker_hands({hands = text, from = rune, ascension_power = G.GAME.providence and 4 or 2})
             return {
                 func = function()
                 end,
@@ -960,7 +997,7 @@ local sowilo_indicator = {
     end
 }
 
-local tiwaz = Entropy.create_rune("tiwaz", {x=2,y=2}, "rune_entr_tiwaz", 6017)
+local tiwaz = Entropy.create_rune("tiwaz", {x=2,y=4}, "rune_entr_tiwaz", 6017, nil, nil, nil, {x = 2, y = 5})
 local tiwaz_indicator = {
     object_type = "RuneTag",
     order = 7017,
@@ -999,7 +1036,7 @@ local tiwaz_indicator = {
     end
 }
 
-local berkano = Entropy.create_rune("berkano", {x=3,y=2}, "rune_entr_berkano", 6018)
+local berkano = Entropy.create_rune("berkano", {x=3,y=4}, "rune_entr_berkano", 6018, nil, nil, nil, {x = 3, y = 5})
 local berkano_indicator = {
     object_type = "RuneTag",
     order = 7018,
@@ -1045,7 +1082,7 @@ local berkano_indicator = {
     end
 }
 
-local ehwaz = Entropy.create_rune("ehwaz", {x=4,y=2}, "rune_entr_ehwaz", 6019)
+local ehwaz = Entropy.create_rune("ehwaz", {x=4,y=4}, "rune_entr_ehwaz", 6019, nil, nil, nil, {x = 4, y = 5})
 local ehwaz_indicator = {
     object_type = "RuneTag",
     order = 7019,
@@ -1056,6 +1093,7 @@ local ehwaz_indicator = {
     dependencies = {items = {"set_entr_runes"}},
     calculate = function(self, rune, context)
         if context.skip_blind then
+            SMODS.calculate_context({rune_triggered = true, rune = rune})
             local card = context.removed and context.removed[1] or context.destroy_card
             local bl = ({Boss = "Big", Big = "Small"})[G.GAME.blind_on_deck]
             local o = G.GAME.round_resets.blind_states[bl == "Big" and "Small" or "Big"]
@@ -1108,7 +1146,7 @@ local ehwaz_indicator = {
     end
 }
 
-local mannaz = Entropy.create_rune("mannaz", {x=5,y=2}, "rune_entr_mannaz", 6020)
+local mannaz = Entropy.create_rune("mannaz", {x=5,y=4}, "rune_entr_mannaz", 6020, nil, nil, nil, {x = 5, y = 5})
 local mannaz_indicator = {
     object_type = "RuneTag",
     order = 7020,
@@ -1131,7 +1169,7 @@ local mannaz_indicator = {
     end
 }
 
-local laguz = Entropy.create_rune("laguz", {x=6,y=2}, "rune_entr_laguz", 6021)
+local laguz = Entropy.create_rune("laguz", {x=6,y=4}, "rune_entr_laguz", 6021, nil, nil, nil, {x = 6, y = 5})
 local laguz_indicator = {
     object_type = "RuneTag",
     order = 7021,
@@ -1154,7 +1192,7 @@ local laguz_indicator = {
     end
 }
 
-local ingwaz = Entropy.create_rune("ingwaz", {x=0,y=3}, "rune_entr_ingwaz", 6022)
+local ingwaz = Entropy.create_rune("ingwaz", {x=0,y=6}, "rune_entr_ingwaz", 6022, nil, nil, nil, {x = 0, y = 7})
 local ingwaz_indicator = {
     object_type = "RuneTag",
     order = 7022,
@@ -1165,6 +1203,7 @@ local ingwaz_indicator = {
     dependencies = {items = {"set_entr_runes"}},
     calculate = function(self, rune, context)
         if context.pseudorandom_result and not rune.triggered then
+            SMODS.calculate_context({rune_triggered = true, rune = rune})
             if not G.GAME.providence or pseudorandom("rune_entr_ingwaz") < 0.66 then
                 rune.triggered = true
                 return {
@@ -1178,7 +1217,7 @@ local ingwaz_indicator = {
     end
 }
 
-local dagaz = Entropy.create_rune("dagaz", {x=1,y=3}, "rune_entr_dagaz", 6023)
+local dagaz = Entropy.create_rune("dagaz", {x=1,y=6}, "rune_entr_dagaz", 6023, nil, nil, nil, {x = 1, y = 7})
 local dagaz_indicator = {
     object_type = "RuneTag",
     order = 7023,
@@ -1213,7 +1252,7 @@ local dagaz_indicator = {
     end
 }
 
-local othila = Entropy.create_rune("othila", {x=2,y=3}, "rune_entr_othila", 6024)
+local othila = Entropy.create_rune("othila", {x=2,y=6}, "rune_entr_othila", 6024, nil, nil, nil, {x = 2, y = 7})
 local othila_indicator = {
     object_type = "RuneTag",
     order = 7024,
@@ -1223,17 +1262,15 @@ local othila_indicator = {
     atlas = "rune_indicators",
     dependencies = {items = {"set_entr_runes"}},
     calculate = function(self, rune, context)
-        if context.selling_card then
+        if context.selling_card_cost then
             return {
-                func = function()
-                    ease_dollars((G.GAME.providence and 4 or 2) * context.card.sell_cost)
-                end
+                cost = context.cost + context.original_cost * (G.GAME.providence and 4 or 2)
             }
         end
     end
 }
 
-local oss = Entropy.create_rune("oss", {x=3,y=3}, "rune_entr_oss", 6025, {art = {"Lil. Mr. Slipstream"}}, nil, true, {x=4,y=3})
+local oss = Entropy.create_rune("oss", {x=3,y=6}, "rune_entr_oss", 6025, {art = {"Lil. Mr. Slipstream"}}, nil, true, {x=3,y=7, extra = {x = 4, y = 6}})
 local oss_indicator = {
     object_type = "RuneTag",
     order = 7025,
@@ -1265,6 +1302,18 @@ local oss_indicator = {
         end
     end
 }
+
+local data = NFS.newFileData(Entropy.path .."/assets/glint.png")
+local _glint = love.graphics.newImage(data)
+SMODS.Shader({
+    key="providence",
+    path="providence.fs",
+    send_vars = function (sprite, card)
+        return {
+            extra_img = _glint
+        }
+    end,
+})
 
 return {
     items = {

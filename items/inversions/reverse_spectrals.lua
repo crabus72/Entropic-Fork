@@ -209,8 +209,8 @@ local ward = {
             if not SMODS.is_eternal(v) and not v.ability.cry_absolute then
                 local joker = G.jokers.cards[i]
                 total = total + joker.cost
-                joker.ability.debuff_timer = card.ability.rounds
-                joker.ability.debuff_timer_max = card.ability.rounds
+                joker.ability.debuff_timer = (joker.ability.debuff_timer or 0) + card.ability.rounds
+                joker.ability.debuff_timer_max = (joker.ability.debuff_timer_max or 0) + card.ability.rounds 
                 joker:set_debuff(true)
             end
         end
@@ -398,7 +398,7 @@ local link = {
     order = 2500 + 0,
     no_sticker_sheet = true,
     prefix_config = { key = false },
-    badge_colour = HEX("FF00FF"),
+    badge_colour = HEX("59ffe8"),
     loc_vars = function(self,q,card)
         return {
             vars = {
@@ -412,9 +412,14 @@ local link = {
         end
         card.ability.link = G.GAME.link
     end,
-    calculate = function(self, card, context)
-
-    end
+    draw = function(self, card) --don't draw shine
+        local notilt = nil
+        if card.area and card.area.config.type == "deck" then
+            notilt = true
+        end
+        G.shared_stickers[self.key].role.draw_major = card
+        G.shared_stickers[self.key]:draw_shader("dissolve", nil, nil, notilt, card.children.center)
+    end,
 }
 
 local ichor = {
@@ -443,8 +448,8 @@ local ichor = {
         if joker then
             joker:start_dissolve()
             G.GAME.banned_keys[joker.config.center.key] = true
-            G.jokers:handle_card_limit(card.ability.num)
-            eval_card(joker, {banishing_card = true, banisher = card, card = joker, cardarea = joker.area})
+            Entropy.handle_card_limit(G.jokers, card.ability.num)
+            SMODS.eval_individual(joker, {banishing_card = true, banisher = card, card = joker, cardarea = joker.area})
         end
     end,
     can_use = function(self, card)
@@ -487,7 +492,7 @@ local rejuvenate = {
 
     atlas = "consumables",
     config = {
-        dollars = -15,
+        dollars = -10,
         num = 2
     },
 	pos = {x=8,y=5},
@@ -552,24 +557,18 @@ local crypt = {
     atlas = "consumables",
     config = {
         select = 2,
-        rounds = 3,
     },
 	pos = {x=9,y=5},
     --soul_pos = { x = 5, y = 0},
     use = function(self, card2, area, copier)
-        local joker = nil
-        for i, v in pairs(G.jokers.cards) do 
-            if v.highlighted then 
-                joker = v 
-            end 
-        end
-        Entropy.FlipThen(Entropy.GetHighlightedCards({G.jokers}, card2, 1, card2.ability.select), function(v, area)
-            if v ~= joker then            
-                copy_card(joker, v)
-                v:set_edition()
-                v:set_debuff(true)
-                v.ability.debuff_timer = (v.ability.debuff_timer or 0) + card2.ability.rounds
-                v.ability.debuff_timer_max = (v.ability.debuff_timer_max or 0) + card2.ability.rounds
+        local jokers = Entropy.GetHighlightedCards({G.jokers}, card2, 1, card2.ability.select)
+        local selected = pseudorandom_element(jokers, pseudoseed("entr_crypt"))
+        Entropy.FlipThen(jokers, function(v, area)
+            if v ~= selected and v and selected then            
+                copy_card(selected, v)
+                if v.edition and v.edition.key == "e_negative" then
+                    v:set_edition()
+                end
             end
         end)
 
@@ -579,11 +578,20 @@ local crypt = {
         return #cards > 1 and #cards <= card.ability.select
 	end,
     loc_vars = function(self, q, card)
+        local main_end = {}
+        if G.jokers and G.jokers.cards then
+            for _, joker in ipairs(G.jokers.cards) do
+                if joker.edition and joker.edition.negative then
+                    localize { type = 'other', key = 'remove_negative', nodes = main_end, vars = {} }
+                    break
+                end
+            end
+        end
         return {
             vars = {
                 card.ability.select,
-                card.ability.rounds
-            }
+            },
+            main_end = main_end[1]
         }
     end,
     entr_credits = {
@@ -615,8 +623,22 @@ local charm = {
 	pos = {x=11,y=5},
     --soul_pos = { x = 5, y = 0},
     use = function(self, card2, area, copier)
+        local editions = {}
+        for i, v in pairs(G.P_CENTER_POOLS.Edition) do
+            if v.key ~= "e_negative" and v.key ~= "e_base" then
+                editions[#editions+1] = {
+                    weight = 1,
+                    name = v.key
+                }
+            end
+        end
         for i, v in pairs(Entropy.GetHighlightedCards({G.jokers}, card2, 1, card2.ability.select)) do
-            v:set_edition("e_entr_kaleidoscopic")
+            local edition = SMODS.poll_edition({
+                key = "entr_charm",
+                options = editions,
+                guaranteed = true
+            })
+            v:set_edition(edition)
             v.ability.eternal = true
 
         end
@@ -626,7 +648,7 @@ local charm = {
         return #cards <= card.ability.select and #cards > 0
 	end,
     loc_vars = function(self, q, card)
-        q[#q+1] = G.P_CENTERS.e_entr_kaleidoscopic
+        q[#q+1] = G.P_CENTERS.e_entr_gilded
         q[#q+1] = {key="eternal",set="Other"}
         return {
             vars = {
@@ -985,10 +1007,18 @@ local pure = {
     key = "entr_pure",
     no_sticker_sheet = true,
     prefix_config = { key = false },
-    badge_colour = HEX("c75985"),
+    badge_colour = HEX("fd56e9"),
     should_apply = false,
     apply = function(self,card,val)
         card.ability.entr_pure = true
+    end,
+    draw = function(self, card) --don't draw shine
+        local notilt = nil
+        if card.area and card.area.config.type == "deck" then
+            notilt = true
+        end
+        G.shared_stickers[self.key].role.draw_major = card
+        G.shared_stickers[self.key]:draw_shader("dissolve", nil, nil, notilt, card.children.center)
     end,
 }
 
@@ -1041,6 +1071,19 @@ function Cryptid.misprintize(card, ...)
     if not card.ability.entr_pure then
         return misprintize(card, ...)
     end
+end
+
+local calculate_jokerref = Card.calculate_joker
+function Card:calculate_joker(...)
+    local abil
+    if self.ability.entr_pure then
+        abil = copy_table(self.ability)        
+    end
+    local ret = calculate_jokerref(self, ...)
+    if self.ability.entr_pure then
+        self.ability = abil
+    end
+    return ret
 end
 
 local transcend = {

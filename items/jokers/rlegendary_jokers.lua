@@ -288,6 +288,7 @@ local entropy_card = {
     atlas = "reverse_legendary",
     demicoloncompat=true,
     loc_vars = function(self, info_queue, card)
+        if Entropy.config.asc_power_tutorial then info_queue[#info_queue+1] = {set = "Other", key = "asc_power_tutorial"} end
         return {
             vars = {
                 number_format(card.ability.x_asc_mod),
@@ -568,7 +569,7 @@ local ssac = {
                 local c_r = G.consumeables.cards[#G.consumeables.cards] and Cryptid.forcetrigger(G.consumeables.cards[#G.consumeables.cards], context) or {}
                 local v = G.play.cards[#G.play.cards]
                 if G.play.cards and v then
-                    local results = eval_card(v, {cardarea=G.play,main_scoring=true, forcetrigger=true, individual=true})
+                    local results = SMODS.eval_individual(v, {cardarea=G.play,main_scoring=true, forcetrigger=true, individual=true}) or {}
                     if results then
                         for i, v2 in pairs(results) do
                             for i2, result in pairs(type(v2) == "table" and v2 or {}) do
@@ -576,7 +577,7 @@ local ssac = {
                             end
                         end
                     end
-                    local results = eval_card(v, {cardarea=G.hand,main_scoring=true, forcetrigger=true, individual=true})
+                    local results = SMODS.eval_individual(v, {cardarea=G.hand,main_scoring=true, forcetrigger=true, individual=true}) or {}
                     if results then
                         for i, v2 in pairs(results) do
                             for i2, result in pairs(type(v2) == "table" and v2 or {}) do
